@@ -24,6 +24,7 @@ def calculate_commission(
     stone_items: list[dict[str, Any]],
     labour_hours: float,
     labour_rate_gbp_per_hr: float,
+    supplier_markup_pct: float,
     overhead_pct: float,
     target_profit_margin_pct: float,
     vat_enabled: bool,
@@ -51,8 +52,9 @@ def calculate_commission(
             }
         )
 
+    supplier_markup_cost = (metal_cost + stone_cost) * (supplier_markup_pct / 100)
     labour_cost = labour_hours * labour_rate_gbp_per_hr
-    base_subtotal = metal_cost + stone_cost + labour_cost
+    base_subtotal = metal_cost + stone_cost + supplier_markup_cost + labour_cost
 
     overhead_cost = base_subtotal * (overhead_pct / 100)
     subtotal_plus_overhead = base_subtotal + overhead_cost
@@ -71,6 +73,8 @@ def calculate_commission(
         "metal_base_cost_gbp": round_money(metal_base),
         "metal_cost_gbp": round_money(metal_cost),
         "stone_cost_gbp": round_money(stone_cost),
+        "supplier_markup_pct": round(supplier_markup_pct, 2),
+        "supplier_markup_cost_gbp": round_money(supplier_markup_cost),
         "stone_lines": stone_lines,
         "labour_cost_gbp": round_money(labour_cost),
         "base_subtotal_gbp": round_money(base_subtotal),
@@ -96,6 +100,7 @@ def calculate_workshop_price(
     labour_rate_gbp_per_hr: float,
     consumables_per_person: float,
     venue_cost: float,
+    supplier_markup_pct: float,
     overhead_pct: float,
     target_profit_margin_pct: float,
     vat_enabled: bool,
@@ -108,8 +113,9 @@ def calculate_workshop_price(
     metal_cost = metal_base * (1 + waste_pct / 100)
     tutor_cost = tutor_hours * labour_rate_gbp_per_hr
     consumables_total = attendees * consumables_per_person
+    supplier_markup_cost = (metal_cost + consumables_total) * supplier_markup_pct / 100
 
-    base_subtotal = metal_cost + tutor_cost + consumables_total + venue_cost
+    base_subtotal = metal_cost + consumables_total + supplier_markup_cost + tutor_cost + venue_cost
     overhead_cost = base_subtotal * overhead_pct / 100
     subtotal_plus_overhead = base_subtotal + overhead_cost
     profit_cost = subtotal_plus_overhead * target_profit_margin_pct / 100
@@ -123,6 +129,8 @@ def calculate_workshop_price(
         "total_grams": round_money(total_grams),
         "spot_gbp_per_gram": round_money(spot_gbp_per_gram),
         "metal_cost_gbp": round_money(metal_cost),
+        "supplier_markup_pct": round(supplier_markup_pct, 2),
+        "supplier_markup_cost_gbp": round_money(supplier_markup_cost),
         "tutor_cost_gbp": round_money(tutor_cost),
         "consumables_total_gbp": round_money(consumables_total),
         "venue_cost_gbp": round_money(venue_cost),

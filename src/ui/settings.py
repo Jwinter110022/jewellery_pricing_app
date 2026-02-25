@@ -27,6 +27,13 @@ def render(conn: sqlite3.Connection) -> None:
                 value=float(current["vat_rate_pct"]),
                 step=0.5,
             )
+            supplier_markup_pct = st.number_input(
+                "Supplier markup on materials (%)",
+                min_value=0.0,
+                max_value=500.0,
+                value=float(current["supplier_markup_pct"]),
+                step=0.5,
+            )
             commission_deposit_pct = st.number_input(
                 "Commission deposit (%)",
                 min_value=0.0,
@@ -96,6 +103,7 @@ def render(conn: sqlite3.Connection) -> None:
                 "labour_rate_gbp_per_hr": labour_rate,
                 "vat_enabled": vat_enabled,
                 "vat_rate_pct": vat_rate,
+                "supplier_markup_pct": supplier_markup_pct,
                 "commission_deposit_pct": commission_deposit_pct,
                 "estimate_variance_pct": estimate_variance_pct,
                 "estimate_valid_days": estimate_valid_days,

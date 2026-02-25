@@ -56,6 +56,7 @@ th, td {{ border: 1px solid #e5e7eb; padding: 8px; text-align: left; }}
   <table>
     <tr><td>Metal Cost</td><td>£{breakdown['metal_cost_gbp']:.2f}</td></tr>
     <tr><td>Stone Cost</td><td>£{breakdown['stone_cost_gbp']:.2f}</td></tr>
+        <tr><td>Supplier Markup ({breakdown.get('supplier_markup_pct', 0):.1f}%)</td><td>£{breakdown.get('supplier_markup_cost_gbp', 0):.2f}</td></tr>
     <tr><td>Labour Cost</td><td>£{breakdown['labour_cost_gbp']:.2f}</td></tr>
     <tr><td>Overhead</td><td>£{breakdown['overhead_cost_gbp']:.2f}</td></tr>
     <tr><td>Profit</td><td>£{breakdown['profit_cost_gbp']:.2f}</td></tr>
@@ -208,6 +209,7 @@ def render(conn: sqlite3.Connection, fixed_quote_type: str | None = None) -> Non
             stone_items=stone_items,
             labour_hours=labour_hours,
             labour_rate_gbp_per_hr=settings["labour_rate_gbp_per_hr"],
+            supplier_markup_pct=settings["supplier_markup_pct"],
             overhead_pct=settings["overhead_pct"],
             target_profit_margin_pct=settings["target_profit_margin_pct"],
             vat_enabled=quote_vat_enabled,
@@ -245,6 +247,7 @@ def render(conn: sqlite3.Connection, fixed_quote_type: str | None = None) -> Non
             [
                 ["Metal", breakdown["metal_cost_gbp"]],
                 ["Stones", breakdown["stone_cost_gbp"]],
+                [f"Supplier Markup ({breakdown.get('supplier_markup_pct', 0):.1f}%)", breakdown.get("supplier_markup_cost_gbp", 0.0)],
                 ["Labour", breakdown["labour_cost_gbp"]],
                 ["Overhead", breakdown["overhead_cost_gbp"]],
                 ["Profit", breakdown["profit_cost_gbp"]],
@@ -287,6 +290,7 @@ def render(conn: sqlite3.Connection, fixed_quote_type: str | None = None) -> Non
             "settings_snapshot": {
                 "labour_rate_gbp_per_hr": settings["labour_rate_gbp_per_hr"],
                 "metal_waste_pct": settings["metal_waste_pct"],
+                "supplier_markup_pct": settings["supplier_markup_pct"],
                 "overhead_pct": settings["overhead_pct"],
                 "target_profit_margin_pct": settings["target_profit_margin_pct"],
                 "vat_enabled": quote_vat_enabled,

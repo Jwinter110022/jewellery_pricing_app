@@ -39,6 +39,7 @@ def _prefill_cost_rows_from_breakdown(breakdown: dict[str, Any], fallback_total:
     mapping = [
         ("Metal", "metal_cost_gbp"),
         ("Stones", "stone_cost_gbp"),
+        ("Supplier Markup", "supplier_markup_cost_gbp"),
         ("Labour", "labour_cost_gbp"),
         ("Overhead", "overhead_cost_gbp"),
         ("Profit", "profit_cost_gbp"),
