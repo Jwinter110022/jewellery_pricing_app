@@ -1,10 +1,17 @@
 import json
 import sqlite3
+import hashlib
+import hmac
+import re
+import secrets
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-DB_PATH = Path(__file__).resolve().parents[1] / "data" / "pricing.db"
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+DB_PATH = DATA_DIR / "pricing.db"
+AUTH_DB_PATH = DATA_DIR / "auth.db"
+PASSWORD_ITERATIONS = 200_000
 
 DEFAULT_SETTINGS: dict[str, str] = {
     "labour_rate_gbp_per_hr": "35",
@@ -25,11 +32,151 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def get_connection() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
+    target = db_path or DB_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(target)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def _safe_username(username: str) -> str:
+    cleaned = re.sub(r"[^a-z0-9_.-]+", "_", username.strip().lower())
+    return cleaned[:32] or "user"
+
+
+def get_user_connection(username: str) -> sqlite3.Connection:
+    user_slug = _safe_username(username)
+    return get_connection(DATA_DIR / f"pricing_{user_slug}.db")
+
+
+def get_user_db_path(username: str) -> Path:
+    user_slug = _safe_username(username)
+    return DATA_DIR / f"pricing_{user_slug}.db"
+
+
+def init_auth_db(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_salt TEXT NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+
+
+def get_auth_connection() -> sqlite3.Connection:
+    conn = get_connection(AUTH_DB_PATH)
+    init_auth_db(conn)
+    return conn
+
+
+def _hash_password(password: str, salt_hex: str) -> str:
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        bytes.fromhex(salt_hex),
+        PASSWORD_ITERATIONS,
+    )
+    return digest.hex()
+
+
+def create_user(auth_conn: sqlite3.Connection, username: str, password: str) -> tuple[bool, str]:
+    normalized = username.strip().lower()
+    if not re.fullmatch(r"[a-z0-9_.-]{3,32}", normalized):
+        return False, "Username must be 3-32 chars and use letters, numbers, ., _, or -."
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters."
+
+    salt_hex = secrets.token_hex(16)
+    password_hash = _hash_password(password, salt_hex)
+    try:
+        auth_conn.execute(
+            """
+            INSERT INTO users (username, password_salt, password_hash, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (normalized, salt_hex, password_hash, utc_now_iso()),
+        )
+        auth_conn.commit()
+    except sqlite3.IntegrityError:
+        return False, "That username already exists."
+
+    return True, normalized
+
+
+def authenticate_user(auth_conn: sqlite3.Connection, username: str, password: str) -> str | None:
+    normalized = username.strip().lower()
+    row = auth_conn.execute(
+        "SELECT username, password_salt, password_hash FROM users WHERE username = ?",
+        (normalized,),
+    ).fetchone()
+    if row is None:
+        return None
+
+    attempted_hash = _hash_password(password, row["password_salt"])
+    if not hmac.compare_digest(attempted_hash, row["password_hash"]):
+        return None
+
+    return str(row["username"])
+
+
+def update_user_password(
+    auth_conn: sqlite3.Connection,
+    username: str,
+    current_password: str,
+    new_password: str,
+) -> tuple[bool, str]:
+    normalized = username.strip().lower()
+    row = auth_conn.execute(
+        "SELECT password_salt, password_hash FROM users WHERE username = ?",
+        (normalized,),
+    ).fetchone()
+    if row is None:
+        return False, "User not found."
+
+    current_hash = _hash_password(current_password, row["password_salt"])
+    if not hmac.compare_digest(current_hash, row["password_hash"]):
+        return False, "Current password is incorrect."
+
+    if len(new_password) < 8:
+        return False, "New password must be at least 8 characters."
+
+    new_salt = secrets.token_hex(16)
+    new_hash = _hash_password(new_password, new_salt)
+    auth_conn.execute(
+        """
+        UPDATE users
+        SET password_salt = ?, password_hash = ?
+        WHERE username = ?
+        """,
+        (new_salt, new_hash, normalized),
+    )
+    auth_conn.commit()
+    return True, "Password updated."
+
+
+def delete_user_account(auth_conn: sqlite3.Connection, username: str, password: str) -> tuple[bool, str]:
+    normalized = username.strip().lower()
+    row = auth_conn.execute(
+        "SELECT password_salt, password_hash FROM users WHERE username = ?",
+        (normalized,),
+    ).fetchone()
+    if row is None:
+        return False, "User not found."
+
+    attempted_hash = _hash_password(password, row["password_salt"])
+    if not hmac.compare_digest(attempted_hash, row["password_hash"]):
+        return False, "Password is incorrect."
+
+    auth_conn.execute("DELETE FROM users WHERE username = ?", (normalized,))
+    auth_conn.commit()
+    return True, "Account deleted."
 
 
 def init_db(conn: sqlite3.Connection) -> None:
