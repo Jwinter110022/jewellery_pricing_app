@@ -113,3 +113,45 @@ def render(_: sqlite3.Connection) -> None:
         "Length is based on UK ring size inner circumference plus one material height for neutral axis. "
         "Weight assumes solid silver and the selected cross-section shape."
     )
+
+    st.divider()
+    st.markdown("### Ring Size Converter")
+
+    size_options = _build_size_options()
+    size_labels = [option[0] for option in size_options]
+    size_map = {option[0]: option[1] for option in size_options}
+
+    system = st.selectbox("Input system", options=["UK", "US", "EU", "JP"])
+    if system == "UK":
+        input_size = st.selectbox("UK size", options=size_labels, index=size_labels.index("L"))
+        circumference_mm = float(size_map[input_size])
+    elif system == "US":
+        us_size = st.number_input("US size", min_value=1.0, max_value=16.0, value=7.0, step=0.25)
+        diameter_mm = 11.63 + (us_size * 0.8128)
+        circumference_mm = diameter_mm * math.pi
+    elif system == "JP":
+        jp_size = st.number_input("JP size", min_value=1.0, max_value=30.0, value=12.0, step=0.5)
+        circumference_mm = jp_size + 40.0
+    else:
+        circumference_mm = st.number_input(
+            "EU size (circumference mm)",
+            min_value=35.0,
+            max_value=75.0,
+            value=52.0,
+            step=0.1,
+        )
+
+    diameter_mm = circumference_mm / math.pi
+    us_calc = (diameter_mm - 11.63) / 0.8128
+    jp_calc = circumference_mm - 40.0
+
+    closest_uk = min(size_options, key=lambda item: abs(item[1] - circumference_mm))
+    eu_size = circumference_mm
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("UK (nearest)", f"{closest_uk[0]} ({closest_uk[1]:.1f} mm)")
+    c2.metric("US (approx)", f"{round(us_calc * 4) / 4:.2f}")
+    c3.metric("EU (mm)", f"{eu_size:.1f}")
+    c4.metric("JP (approx)", f"{round(jp_calc * 2) / 2:.1f}")
+
+    st.caption("US/JP conversions are approximate; verify with a ring mandrel for exact sizing.")

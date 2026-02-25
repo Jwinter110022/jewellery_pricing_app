@@ -18,7 +18,7 @@ A local Streamlit app for jewellery commission and workshop pricing.
 - Commission quote builder with itemised breakdown, save history, printable HTML export
 - Dedicated per-account estimate/quote logs page with search, filters, CSV export, detailed breakdown view, and clear-all action
 - Completed Projects page with linked-quote selection, finished image upload, editable cost-variance rows, KPIs, and CSV export
-- Ring-making calculators page (UK ring size to wire length + estimated silver weight)
+- Ring-making calculators page (UK ring size to wire length + estimated silver weight + ring size converter)
 - Workshop pricing calculator with per-person/total output and saved templates
 - Local SQLite storage per user (`data/pricing_<username>.db`) + auth DB (`data/auth.db`)
 
