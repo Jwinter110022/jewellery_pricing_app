@@ -298,6 +298,43 @@ def init_db(conn: sqlite3.Connection) -> None:
         """
     )
 
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS completed_projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_name TEXT NOT NULL,
+            customer_name TEXT,
+            quote_id INTEGER,
+            quote_summary TEXT,
+            quoted_total_gbp REAL NOT NULL,
+            actual_total_gbp REAL NOT NULL,
+            variance_gbp REAL NOT NULL,
+            variance_pct REAL,
+            notes TEXT,
+            image_name TEXT,
+            image_mime TEXT,
+            image_data BLOB,
+            quote_breakdown_json TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (quote_id) REFERENCES commission_quotes(id)
+        )
+        """
+    )
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS completed_project_cost_rows (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            category TEXT NOT NULL,
+            quoted_cost_gbp REAL NOT NULL,
+            actual_cost_gbp REAL NOT NULL,
+            FOREIGN KEY (project_id) REFERENCES completed_projects(id)
+        )
+        """
+    )
+
     for key, value in DEFAULT_SETTINGS.items():
         cursor.execute(
             """
@@ -553,6 +590,28 @@ def list_commission_quotes(conn: sqlite3.Connection, limit: int = 100) -> list[s
     ).fetchall()
 
 
+def get_commission_quote(conn: sqlite3.Connection, quote_id: int) -> sqlite3.Row | None:
+    return conn.execute(
+        """
+        SELECT
+            id,
+            customer_name,
+            quote_type,
+            metal_symbol,
+            alloy_label,
+            weight_grams,
+            labour_hours,
+            settings_json,
+            breakdown_json,
+            final_price_gbp,
+            created_at
+        FROM commission_quotes
+        WHERE id = ?
+        """,
+        (quote_id,),
+    ).fetchone()
+
+
 def list_commission_logs(conn: sqlite3.Connection, limit: int = 1000) -> list[sqlite3.Row]:
     return conn.execute(
         """
@@ -602,6 +661,134 @@ def get_quote_stone_lines(conn: sqlite3.Connection, quote_id: int) -> list[sqlit
         ORDER BY qs.id ASC
         """,
         (quote_id,),
+    ).fetchall()
+
+
+def add_completed_project(
+    conn: sqlite3.Connection,
+    project_payload: dict[str, Any],
+    cost_rows: list[dict[str, Any]],
+) -> int:
+    now = utc_now_iso()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO completed_projects
+        (
+            project_name,
+            customer_name,
+            quote_id,
+            quote_summary,
+            quoted_total_gbp,
+            actual_total_gbp,
+            variance_gbp,
+            variance_pct,
+            notes,
+            image_name,
+            image_mime,
+            image_data,
+            quote_breakdown_json,
+            created_at,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            project_payload["project_name"],
+            project_payload.get("customer_name"),
+            project_payload.get("quote_id"),
+            project_payload.get("quote_summary"),
+            float(project_payload["quoted_total_gbp"]),
+            float(project_payload["actual_total_gbp"]),
+            float(project_payload["variance_gbp"]),
+            project_payload.get("variance_pct"),
+            project_payload.get("notes", ""),
+            project_payload.get("image_name"),
+            project_payload.get("image_mime"),
+            project_payload.get("image_data"),
+            project_payload.get("quote_breakdown_json"),
+            now,
+            now,
+        ),
+    )
+    project_id = int(cursor.lastrowid)
+
+    for row in cost_rows:
+        cursor.execute(
+            """
+            INSERT INTO completed_project_cost_rows (project_id, category, quoted_cost_gbp, actual_cost_gbp)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                project_id,
+                str(row["category"]).strip(),
+                float(row["quoted_cost_gbp"]),
+                float(row["actual_cost_gbp"]),
+            ),
+        )
+
+    conn.commit()
+    return project_id
+
+
+def list_completed_projects(conn: sqlite3.Connection, limit: int = 1000) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT
+            id,
+            project_name,
+            customer_name,
+            quote_id,
+            quote_summary,
+            quoted_total_gbp,
+            actual_total_gbp,
+            variance_gbp,
+            variance_pct,
+            created_at
+        FROM completed_projects
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+
+
+def get_completed_project(conn: sqlite3.Connection, project_id: int) -> sqlite3.Row | None:
+    return conn.execute(
+        """
+        SELECT
+            id,
+            project_name,
+            customer_name,
+            quote_id,
+            quote_summary,
+            quoted_total_gbp,
+            actual_total_gbp,
+            variance_gbp,
+            variance_pct,
+            notes,
+            image_name,
+            image_mime,
+            image_data,
+            quote_breakdown_json,
+            created_at,
+            updated_at
+        FROM completed_projects
+        WHERE id = ?
+        """,
+        (project_id,),
+    ).fetchone()
+
+
+def list_completed_project_cost_rows(conn: sqlite3.Connection, project_id: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT id, category, quoted_cost_gbp, actual_cost_gbp
+        FROM completed_project_cost_rows
+        WHERE project_id = ?
+        ORDER BY id ASC
+        """,
+        (project_id,),
     ).fetchall()
 
 

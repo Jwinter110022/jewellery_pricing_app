@@ -1,3 +1,11 @@
-from . import commissions, dashboard, history_logs, settings, stones, workshops
+from . import commissions, dashboard, history_logs, projects, settings, stones, workshops
 
-__all__ = ["dashboard", "settings", "stones", "commissions", "workshops", "history_logs"]
+__all__ = [
+	"dashboard",
+	"settings",
+	"stones",
+	"commissions",
+	"workshops",
+	"history_logs",
+	"projects",
+]

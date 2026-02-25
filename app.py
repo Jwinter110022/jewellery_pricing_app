@@ -13,7 +13,7 @@ from src.db import (
     init_db,
     update_user_password,
 )
-from src.ui import commissions, dashboard, history_logs, settings, stones, workshops
+from src.ui import commissions, dashboard, history_logs, projects, settings, stones, workshops
 
 
 # Load environment variables from local .env file.
@@ -139,6 +139,7 @@ def main() -> None:
             "Commission Estimates",
             "Workshop Pricing",
             "History Logs",
+            "Completed Projects",
         ],
     )
 
@@ -156,6 +157,8 @@ def main() -> None:
         workshops.render(conn)
     elif page == "History Logs":
         history_logs.render(conn)
+    elif page == "Completed Projects":
+        projects.render(conn)
 
 
 if __name__ == "__main__":

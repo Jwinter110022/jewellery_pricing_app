@@ -17,6 +17,7 @@ A local Streamlit app for jewellery commission and workshop pricing.
 - Stone catalog CRUD with optional stone image upload, plus CSV import/export + downloadable template
 - Commission quote builder with itemised breakdown, save history, printable HTML export
 - Dedicated per-account estimate/quote logs page with search, filters, CSV export, detailed breakdown view, and clear-all action
+- Completed Projects page with linked-quote selection, finished image upload, editable cost-variance rows, KPIs, and CSV export
 - Workshop pricing calculator with per-person/total output and saved templates
 - Local SQLite storage per user (`data/pricing_<username>.db`) + auth DB (`data/auth.db`)
 
