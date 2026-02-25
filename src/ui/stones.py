@@ -29,6 +29,16 @@ def _empty_stone() -> dict[str, object]:
     }
 
 
+def _uploaded_image_payload(uploaded_file) -> dict[str, object] | None:
+    if uploaded_file is None:
+        return None
+    return {
+        "image_name": uploaded_file.name,
+        "image_mime": uploaded_file.type or "application/octet-stream",
+        "image_data": uploaded_file.getvalue(),
+    }
+
+
 def render(conn: sqlite3.Connection) -> None:
     st.subheader("Stone Catalog")
 
@@ -39,7 +49,22 @@ def render(conn: sqlite3.Connection) -> None:
         if not rows:
             st.info("No stones yet. Add your first stone in the next tab.")
         else:
-            df = pd.DataFrame([dict(row) for row in rows])
+            df = pd.DataFrame(
+                [
+                    {
+                        "id": int(row["id"]),
+                        "stone_type": row["stone_type"],
+                        "size_mm_or_carat": row["size_mm_or_carat"],
+                        "grade": row["grade"],
+                        "supplier": row["supplier"],
+                        "cost_gbp": float(row["cost_gbp"]),
+                        "default_markup_pct": float(row["default_markup_pct"]),
+                        "notes": row["notes"],
+                        "has_image": bool(row["image_data"]),
+                    }
+                    for row in rows
+                ]
+            )
             st.dataframe(
                 df[
                     [
@@ -50,6 +75,7 @@ def render(conn: sqlite3.Connection) -> None:
                         "supplier",
                         "cost_gbp",
                         "default_markup_pct",
+                        "has_image",
                         "notes",
                     ]
                 ],
@@ -79,6 +105,22 @@ def render(conn: sqlite3.Connection) -> None:
                         value=float(selected["default_markup_pct"]),
                     )
                     notes = st.text_area("Notes", value=selected["notes"] or "")
+                    if selected["image_data"]:
+                        st.image(
+                            selected["image_data"],
+                            caption=selected["image_name"] or "Stone image",
+                            width=180,
+                        )
+                    replace_image = st.file_uploader(
+                        "Upload / replace image",
+                        type=["png", "jpg", "jpeg", "webp"],
+                        key=f"edit_image_{selected_id}",
+                    )
+                    remove_image = st.checkbox(
+                        "Remove current image",
+                        value=False,
+                        key=f"remove_image_{selected_id}",
+                    )
 
                 save_edit = st.form_submit_button("Save changes", type="primary")
 
@@ -87,6 +129,19 @@ def render(conn: sqlite3.Connection) -> None:
                 delete_click = st.button("Delete stone", type="secondary")
 
             if save_edit:
+                existing_image_payload = {
+                    "image_name": selected["image_name"],
+                    "image_mime": selected["image_mime"],
+                    "image_data": selected["image_data"],
+                }
+                uploaded_payload = _uploaded_image_payload(replace_image)
+                if remove_image:
+                    final_image_payload = {"image_name": None, "image_mime": None, "image_data": None}
+                elif uploaded_payload is not None:
+                    final_image_payload = uploaded_payload
+                else:
+                    final_image_payload = existing_image_payload
+
                 update_stone(
                     conn,
                     selected_id,
@@ -98,6 +153,9 @@ def render(conn: sqlite3.Connection) -> None:
                         "cost_gbp": cost,
                         "default_markup_pct": markup,
                         "notes": notes,
+                        "image_name": final_image_payload["image_name"],
+                        "image_mime": final_image_payload["image_mime"],
+                        "image_data": final_image_payload["image_data"],
                     },
                 )
                 st.success("Stone updated.")
@@ -125,6 +183,11 @@ def render(conn: sqlite3.Connection) -> None:
                     value=float(empty["default_markup_pct"]),
                 )
                 notes = st.text_area("Notes", value=str(empty["notes"]))
+                add_image = st.file_uploader(
+                    "Stone image (optional)",
+                    type=["png", "jpg", "jpeg", "webp"],
+                    key="add_stone_image",
+                )
 
             submit_add = st.form_submit_button("Add stone", type="primary")
 
@@ -132,6 +195,11 @@ def render(conn: sqlite3.Connection) -> None:
             if not stone_type.strip():
                 st.error("Stone type is required.")
             else:
+                add_image_payload = _uploaded_image_payload(add_image) or {
+                    "image_name": None,
+                    "image_mime": None,
+                    "image_data": None,
+                }
                 add_stone(
                     conn,
                     {
@@ -142,6 +210,9 @@ def render(conn: sqlite3.Connection) -> None:
                         "cost_gbp": cost,
                         "default_markup_pct": markup,
                         "notes": notes,
+                        "image_name": add_image_payload["image_name"],
+                        "image_mime": add_image_payload["image_mime"],
+                        "image_data": add_image_payload["image_data"],
                     },
                 )
                 st.success("Stone added.")

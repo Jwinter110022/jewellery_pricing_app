@@ -14,7 +14,7 @@ A local Streamlit app for jewellery commission and workshop pricing.
 - Login / sign-up page with local credentials
 - Dashboard with cached XAG/XAU/XPT spot prices in GBP + refresh button
 - Settings for labour, VAT, waste, overhead, profit, unit conversion, and cache TTL
-- Stone catalog CRUD with CSV import/export + downloadable template
+- Stone catalog CRUD with optional stone image upload, plus CSV import/export + downloadable template
 - Commission quote builder with itemised breakdown, save history, printable HTML export
 - Workshop pricing calculator with per-person/total output and saved templates
 - Local SQLite storage per user (`data/pricing_<username>.db`) + auth DB (`data/auth.db`)

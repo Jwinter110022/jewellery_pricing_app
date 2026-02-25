@@ -214,11 +214,22 @@ def init_db(conn: sqlite3.Connection) -> None:
             cost_gbp REAL NOT NULL,
             default_markup_pct REAL NOT NULL,
             notes TEXT,
+            image_name TEXT,
+            image_mime TEXT,
+            image_data BLOB,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
         """
     )
+
+    stone_columns = [row["name"] for row in conn.execute("PRAGMA table_info(stones)").fetchall()]
+    if "image_name" not in stone_columns:
+        cursor.execute("ALTER TABLE stones ADD COLUMN image_name TEXT")
+    if "image_mime" not in stone_columns:
+        cursor.execute("ALTER TABLE stones ADD COLUMN image_mime TEXT")
+    if "image_data" not in stone_columns:
+        cursor.execute("ALTER TABLE stones ADD COLUMN image_data BLOB")
 
     cursor.execute(
         """
@@ -398,8 +409,8 @@ def add_stone(conn: sqlite3.Connection, stone: dict[str, Any]) -> None:
     conn.execute(
         """
         INSERT INTO stones
-        (stone_type, size_mm_or_carat, grade, supplier, cost_gbp, default_markup_pct, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (stone_type, size_mm_or_carat, grade, supplier, cost_gbp, default_markup_pct, notes, image_name, image_mime, image_data, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             stone["stone_type"],
@@ -409,6 +420,9 @@ def add_stone(conn: sqlite3.Connection, stone: dict[str, Any]) -> None:
             stone["cost_gbp"],
             stone["default_markup_pct"],
             stone.get("notes", ""),
+            stone.get("image_name"),
+            stone.get("image_mime"),
+            stone.get("image_data"),
             now,
             now,
         ),
@@ -421,7 +435,7 @@ def update_stone(conn: sqlite3.Connection, stone_id: int, stone: dict[str, Any])
         """
         UPDATE stones
         SET stone_type = ?, size_mm_or_carat = ?, grade = ?, supplier = ?,
-            cost_gbp = ?, default_markup_pct = ?, notes = ?, updated_at = ?
+            cost_gbp = ?, default_markup_pct = ?, notes = ?, image_name = ?, image_mime = ?, image_data = ?, updated_at = ?
         WHERE id = ?
         """,
         (
@@ -432,6 +446,9 @@ def update_stone(conn: sqlite3.Connection, stone_id: int, stone: dict[str, Any])
             stone["cost_gbp"],
             stone["default_markup_pct"],
             stone.get("notes", ""),
+            stone.get("image_name"),
+            stone.get("image_mime"),
+            stone.get("image_data"),
             utc_now_iso(),
             stone_id,
         ),
