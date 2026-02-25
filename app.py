@@ -13,7 +13,7 @@ from src.db import (
     init_db,
     update_user_password,
 )
-from src.ui import commissions, dashboard, settings, stones, workshops
+from src.ui import commissions, dashboard, history_logs, settings, stones, workshops
 
 
 # Load environment variables from local .env file.
@@ -131,7 +131,14 @@ def main() -> None:
 
     page = st.sidebar.radio(
         "Navigate",
-        ["Dashboard", "Settings", "Stone Catalog", "Commission Quotes", "Workshop Pricing"],
+        [
+            "Dashboard",
+            "Settings",
+            "Stone Catalog",
+            "Commission Quotes",
+            "Workshop Pricing",
+            "History Logs",
+        ],
     )
 
     if page == "Dashboard":
@@ -144,6 +151,8 @@ def main() -> None:
         commissions.render(conn)
     elif page == "Workshop Pricing":
         workshops.render(conn)
+    elif page == "History Logs":
+        history_logs.render(conn)
 
 
 if __name__ == "__main__":

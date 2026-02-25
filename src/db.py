@@ -553,6 +553,58 @@ def list_commission_quotes(conn: sqlite3.Connection, limit: int = 100) -> list[s
     ).fetchall()
 
 
+def list_commission_logs(conn: sqlite3.Connection, limit: int = 1000) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT
+            id,
+            customer_name,
+            quote_type,
+            metal_symbol,
+            alloy_label,
+            weight_grams,
+            labour_hours,
+            settings_json,
+            breakdown_json,
+            final_price_gbp,
+            created_at
+        FROM commission_quotes
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+
+
+def clear_commission_logs(conn: sqlite3.Connection) -> int:
+    count_row = conn.execute("SELECT COUNT(*) AS count FROM commission_quotes").fetchone()
+    total = int(count_row["count"]) if count_row is not None else 0
+    conn.execute("DELETE FROM quote_stones")
+    conn.execute("DELETE FROM commission_quotes")
+    conn.commit()
+    return total
+
+
+def get_quote_stone_lines(conn: sqlite3.Connection, quote_id: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT
+            qs.stone_id,
+            qs.qty,
+            qs.applied_markup_pct,
+            qs.unit_cost_gbp,
+            s.stone_type,
+            s.size_mm_or_carat,
+            s.grade
+        FROM quote_stones qs
+        LEFT JOIN stones s ON s.id = qs.stone_id
+        WHERE qs.quote_id = ?
+        ORDER BY qs.id ASC
+        """,
+        (quote_id,),
+    ).fetchall()
+
+
 def upsert_workshop_template(conn: sqlite3.Connection, name: str, template: dict[str, Any]) -> None:
     now = utc_now_iso()
     conn.execute(
