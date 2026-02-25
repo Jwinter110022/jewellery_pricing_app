@@ -72,8 +72,12 @@ th, td {{ border: 1px solid #e5e7eb; padding: 8px; text-align: left; }}
 """
 
 
-def render(conn: sqlite3.Connection) -> None:
-    st.subheader("Commission Quote Builder")
+def render(conn: sqlite3.Connection, fixed_quote_type: str | None = None) -> None:
+    normalized_mode = (fixed_quote_type or "").strip().lower()
+    if normalized_mode == "estimate":
+        st.subheader("Commission Estimate Builder")
+    else:
+        st.subheader("Commission Quote Builder")
 
     settings = get_all_settings(conn)
     prices, warning = get_prices_with_cache(conn, SYMBOLS)
@@ -95,11 +99,15 @@ def render(conn: sqlite3.Connection) -> None:
         col1, col2 = st.columns(2)
 
         with col1:
-            document_type = st.radio(
-                "Document type",
-                options=["Quote", "Estimate"],
-                horizontal=True,
-            )
+            if normalized_mode in {"quote", "estimate"}:
+                document_type = "Estimate" if normalized_mode == "estimate" else "Quote"
+                st.caption(f"Document type: {document_type}")
+            else:
+                document_type = st.radio(
+                    "Document type",
+                    options=["Quote", "Estimate"],
+                    horizontal=True,
+                )
             customer_name = st.text_input("Customer name (optional)")
             metal_symbol = st.selectbox("Metal", available_metals)
             alloy_label = st.text_input("Alloy label")

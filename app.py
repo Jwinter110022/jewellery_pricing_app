@@ -136,6 +136,7 @@ def main() -> None:
             "Settings",
             "Stone Catalog",
             "Commission Quotes",
+            "Commission Estimates",
             "Workshop Pricing",
             "History Logs",
         ],
@@ -148,7 +149,9 @@ def main() -> None:
     elif page == "Stone Catalog":
         stones.render(conn)
     elif page == "Commission Quotes":
-        commissions.render(conn)
+        commissions.render(conn, fixed_quote_type="quote")
+    elif page == "Commission Estimates":
+        commissions.render(conn, fixed_quote_type="estimate")
     elif page == "Workshop Pricing":
         workshops.render(conn)
     elif page == "History Logs":
