@@ -290,17 +290,31 @@ def render(conn: sqlite3.Connection) -> None:
             }
         )
 
-        st.dataframe(table_df, hide_index=True, width="stretch")
-
         if display_df.empty:
             st.caption("No projects match your filters.")
             return
 
-        selected_project_id = st.selectbox(
-            "Open project detail",
-            options=[int(pid) for pid in display_df["id"].tolist()],
-            format_func=lambda pid: f"#{pid} - {display_df[display_df['id'] == pid]['project_name'].iloc[0]}",
-        )
+        selected_project_id = int(display_df.iloc[0]["id"])
+        try:
+            selection_event = st.dataframe(
+                table_df,
+                hide_index=True,
+                width="stretch",
+                on_select="rerun",
+                selection_mode="single-row",
+                key="completed_projects_table",
+            )
+            selected_rows = selection_event.selection.rows
+            if selected_rows:
+                selected_project_id = int(display_df.iloc[int(selected_rows[0])]["id"])
+            st.caption("Click a row to open that project detail.")
+        except TypeError:
+            st.dataframe(table_df, hide_index=True, width="stretch")
+            selected_project_id = st.selectbox(
+                "Open project detail",
+                options=[int(pid) for pid in display_df["id"].tolist()],
+                format_func=lambda pid: f"#{pid} - {display_df[display_df['id'] == pid]['project_name'].iloc[0]}",
+            )
 
         project = get_completed_project(conn, int(selected_project_id))
         if project is None:
