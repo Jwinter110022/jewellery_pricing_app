@@ -34,6 +34,14 @@ def render(conn: sqlite3.Connection) -> None:
                 value=float(current["supplier_markup_pct"]),
                 step=0.5,
             )
+            comfort_fit_adjust_mm = st.number_input(
+                "Comfort fit adjustment (mm)",
+                min_value=-5.0,
+                max_value=10.0,
+                value=float(current["comfort_fit_adjust_mm"]),
+                step=0.1,
+                help="Default adjustment applied in ring calculators.",
+            )
             commission_deposit_pct = st.number_input(
                 "Commission deposit (%)",
                 min_value=0.0,
@@ -104,6 +112,7 @@ def render(conn: sqlite3.Connection) -> None:
                 "vat_enabled": vat_enabled,
                 "vat_rate_pct": vat_rate,
                 "supplier_markup_pct": supplier_markup_pct,
+                "comfort_fit_adjust_mm": comfort_fit_adjust_mm,
                 "commission_deposit_pct": commission_deposit_pct,
                 "estimate_variance_pct": estimate_variance_pct,
                 "estimate_valid_days": estimate_valid_days,

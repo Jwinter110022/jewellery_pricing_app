@@ -3,6 +3,7 @@ import sqlite3
 
 import streamlit as st
 
+from src.db import get_all_settings
 UK_RING_SIZES_MM = {
     "A": 37.8,
     "B": 39.1,
@@ -56,9 +57,12 @@ def _format_g(value: float) -> str:
     return f"{value:,.2f} g"
 
 
-def render(_: sqlite3.Connection) -> None:
+def render(conn: sqlite3.Connection) -> None:
     st.subheader("🧮 Essential Ring-Making Calculators & Tools")
     st.caption("Estimate wire length and metal weight from ring size and cross-section.")
+
+    settings = get_all_settings(conn)
+    default_adjust = float(settings.get("comfort_fit_adjust_mm", 0.0))
 
     st.markdown("### Ring Size to Wire Length")
 
@@ -91,7 +95,7 @@ def render(_: sqlite3.Connection) -> None:
             "Comfort fit adjustment (mm)",
             min_value=-5.0,
             max_value=10.0,
-            value=0.0,
+            value=float(default_adjust),
             step=0.1,
             help="Adds to inner circumference before calculating length.",
         )
@@ -136,7 +140,7 @@ def render(_: sqlite3.Connection) -> None:
         "Comfort fit adjustment (mm)",
         min_value=-5.0,
         max_value=10.0,
-        value=0.0,
+        value=float(default_adjust),
         step=0.1,
         help="Adds to circumference before converting sizes.",
         key="converter_comfort_adjust",
