@@ -81,13 +81,23 @@ def render(_: sqlite3.Connection) -> None:
             step=0.01,
         )
 
-    col4, col5 = st.columns(2)
+    col4, col5, col6 = st.columns(3)
     with col4:
         width_mm = st.number_input("Cross-section width (mm)", min_value=0.1, value=1.8, step=0.1)
     with col5:
         height_mm = st.number_input("Cross-section height (mm)", min_value=0.1, value=1.8, step=0.1)
+    with col6:
+        comfort_adjust_mm = st.number_input(
+            "Comfort fit adjustment (mm)",
+            min_value=-5.0,
+            max_value=10.0,
+            value=0.0,
+            step=0.1,
+            help="Adds to inner circumference before calculating length.",
+        )
 
-    inner_diameter_mm = inner_circumference_mm / math.pi
+    adjusted_circumference_mm = inner_circumference_mm + comfort_adjust_mm
+    inner_diameter_mm = adjusted_circumference_mm / math.pi
     neutral_axis_mm = inner_diameter_mm + height_mm
     wire_length_mm = math.pi * neutral_axis_mm
 
@@ -107,11 +117,11 @@ def render(_: sqlite3.Connection) -> None:
     r1, r2, r3 = st.columns(3)
     r1.metric("Wire length", _format_mm(wire_length_mm), _format_cm(length_cm))
     r2.metric("Estimated weight", _format_g(weight_g))
-    r3.metric("Inner circumference", _format_mm(inner_circumference_mm))
+    r3.metric("Inner circumference", _format_mm(adjusted_circumference_mm))
 
     st.caption(
-        "Length is based on UK ring size inner circumference plus one material height for neutral axis. "
-        "Weight assumes solid silver and the selected cross-section shape."
+        "Length is based on UK ring size inner circumference plus comfort adjustment and one material height "
+        "for the neutral axis. Weight assumes solid silver and the selected cross-section shape."
     )
 
     st.divider()
@@ -122,16 +132,26 @@ def render(_: sqlite3.Connection) -> None:
     size_map = {option[0]: option[1] for option in size_options}
 
     system = st.selectbox("Input system", options=["UK", "US", "EU", "JP"])
+    comfort_adjust_mm = st.number_input(
+        "Comfort fit adjustment (mm)",
+        min_value=-5.0,
+        max_value=10.0,
+        value=0.0,
+        step=0.1,
+        help="Adds to circumference before converting sizes.",
+        key="converter_comfort_adjust",
+    )
+
     if system == "UK":
         input_size = st.selectbox("UK size", options=size_labels, index=size_labels.index("L"))
-        circumference_mm = float(size_map[input_size])
+        circumference_mm = float(size_map[input_size]) + comfort_adjust_mm
     elif system == "US":
         us_size = st.number_input("US size", min_value=1.0, max_value=16.0, value=7.0, step=0.25)
         diameter_mm = 11.63 + (us_size * 0.8128)
-        circumference_mm = diameter_mm * math.pi
+        circumference_mm = diameter_mm * math.pi + comfort_adjust_mm
     elif system == "JP":
         jp_size = st.number_input("JP size", min_value=1.0, max_value=30.0, value=12.0, step=0.5)
-        circumference_mm = jp_size + 40.0
+        circumference_mm = jp_size + 40.0 + comfort_adjust_mm
     else:
         circumference_mm = st.number_input(
             "EU size (circumference mm)",
@@ -139,7 +159,7 @@ def render(_: sqlite3.Connection) -> None:
             max_value=75.0,
             value=52.0,
             step=0.1,
-        )
+        ) + comfort_adjust_mm
 
     diameter_mm = circumference_mm / math.pi
     us_calc = (diameter_mm - 11.63) / 0.8128
