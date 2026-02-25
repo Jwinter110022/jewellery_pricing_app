@@ -1,4 +1,4 @@
-from . import commissions, dashboard, history_logs, projects, settings, stones, workshops
+from . import calculators, commissions, dashboard, history_logs, projects, settings, stones, workshops
 
 __all__ = [
 	"dashboard",
@@ -8,4 +8,5 @@ __all__ = [
 	"workshops",
 	"history_logs",
 	"projects",
+	"calculators",
 ]
