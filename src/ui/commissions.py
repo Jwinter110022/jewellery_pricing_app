@@ -170,13 +170,15 @@ def render(conn: sqlite3.Connection, fixed_quote_type: str | None = None) -> Non
                 step=1.0,
             )
 
-            estimate_variance_pct = st.number_input(
-                "Estimate variance (%)",
-                min_value=0.0,
-                max_value=100.0,
-                value=float(settings["estimate_variance_pct"]),
-                step=1.0,
-            )
+            estimate_variance_pct = float(settings["estimate_variance_pct"])
+            if document_type == "Estimate":
+                estimate_variance_pct = st.number_input(
+                    "Estimate variance (%)",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=float(settings["estimate_variance_pct"]),
+                    step=1.0,
+                )
 
         calculate_label = "Calculate estimate" if document_type == "Estimate" else "Calculate quote"
         calculate = st.form_submit_button(calculate_label, type="primary")
